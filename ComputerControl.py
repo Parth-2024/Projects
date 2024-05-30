@@ -389,10 +389,10 @@ def voice_assistant():
 			sp.getoutput(app)
 		elif(txt) and (not(negative)):
 			app="whatsapp"
-			opening(app)
 			info=input("Enter the number of the person, text you want to send, hr of the time, min of the time:")
 			time_delay=int(input("Enter time delay:"))
 			sendWAtxt(info)
+			opening(app)
 			time.sleep(time_delay)
 			sp.run(["taskkill", "/F", "/IM", "chrome.exe"])
 		elif(webs) and (not(negative)):
@@ -426,7 +426,7 @@ def voice_assistant():
 			generate_photo()
 		elif(coordi) and (not(negative)):
 			lat, lng, loc_name = get_location()
-			speak_text("your coordinates and loaction are {lat},{lng} and {loc_name}")
+			speak_text(f"your coordinates and loaction are {lat},{lng} and {loc_name}")
 			print(f"Coordinates: {lat}, {lng}")
 			print(f"Location Name: {loc_name}")
 		elif(mail) and (not(negative)):
