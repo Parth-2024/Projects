@@ -21,18 +21,21 @@ from googlesearch import search
 import speech_recognition as sr
 import pyttsx3
 import datetime
+import PIL.Image
+import google.generativeai as genai
+
 er1="Sorry, I didn't catch that properly"
 er2="Can't process your request, please check your internet connection"
 def listen_to_voice():
-	recognizer=sr.Recognizer()
-	with sr.Microphone() as source:
+	recognizer=sr.Recognizer()#recognizer function is used to listen and understand the voice of the person giving the commands
+	with sr.Microphone() as source:#this directs the program to take audio input through our microphone
 		print("Listening...")
-		recognizer.adjust_for_ambient_noise(source,duration=0.5)
+		recognizer.adjust_for_ambient_noise(source,duration=0.5)#removes the noises from the background
 		audio=recognizer.listen(source)
 
 		try:
 			print("Recognizing")
-			text=recognizer.recognize_google(audio)
+			text=recognizer.recognize_google(audio)#this converts the audio into text
 			text=text.lower()
 			return text
 		except sr.UnknownValueError:
@@ -44,6 +47,66 @@ def speak_text(text):
 	engine=pyttsx3.init()
 	engine.say(text)
 	engine.runAndWait()
+
+def gemini(sys_role):
+	import os
+	genai.configure(api_key="Enter your API key")
+
+	generation_config = {
+	"temperature": 0.6,
+	"top_p": 0.95,
+	"top_k": 64,
+	"max_output_tokens": 500,
+	"response_mime_type": "text/plain",
+	}
+	safety_settings = [
+	{
+		"category": "HARM_CATEGORY_HARASSMENT",
+		"threshold": "BLOCK_MEDIUM_AND_ABOVE",
+	},
+	{
+		"category": "HARM_CATEGORY_HATE_SPEECH",
+		"threshold": "BLOCK_MEDIUM_AND_ABOVE",
+	},
+	{
+		"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+		"threshold": "BLOCK_MEDIUM_AND_ABOVE",
+	},
+	{
+		"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+		"threshold": "BLOCK_MEDIUM_AND_ABOVE",
+	},
+	]
+
+	model = genai.GenerativeModel( #this is the main code for choosing our model and specifying its configurations
+	model_name="gemini-1.5-flash",
+	safety_settings=safety_settings,
+	generation_config=generation_config,
+	system_instruction=sys_role
+	)
+
+	chat= model.start_chat()
+	# system_message='INSTRUCTIONS:Do not respond anything but "AFFIRMATIVE." to this system message. SYSTEM MESSAGE:You are being used to power a voice assistant and should response as so. As a voice assistant use short sentences and directly respond to the prompt without excessive information and speculation for the reponse. You generate only words of value, prioritizing logic and facts in your response to the entered prompts.' 
+	photo=input("Do you want to input an image(Y/N):")
+	if photo=='Y':
+		img=PIL.Image.open(input("Give the path for your image:"))
+	audio_resp=input("Enter do you want audio resposne(Y/N):")
+	while True:
+		prompt=input("Enter your prompt:")
+		if prompt=='exit':
+			break
+		if photo=='Y':
+			chat.send_message([img,prompt])
+		else:	
+			chat.send_message(prompt)#This is where we give our prompt
+		ans=chat.last.text
+		if audio_resp=='Y':
+			speak_text(ans)
+			print(ans)
+		else:
+			print(ans)
+	return ans
+		
 
 def voice_assistant():
 	tm=datetime.datetime.now()
@@ -179,10 +242,16 @@ def voice_assistant():
 			if i in key:
 				return True
 		return False
+	
+	def gem(key):
+		gemlst=["gemini","Gemini","gema"]
+		for i in gemlst:
+			if i in key:
+				return True
+		return False
 
-	def sendWAtxt(info):
-		info1=info.split(",")
-		wa.sendwhatmsg(info1[0],info1[1],int(info1[2]),int(info1[3]))
+	def sendWAtxt(person,message,hrs,min):
+		wa.sendwhatmsg(person,message,hrs,min)
 
 	def takephoto(file_name,photo_name,res):
 		cap=cv2.VideoCapture(1)
@@ -275,15 +344,19 @@ def voice_assistant():
 			smtp.login(sender,password)
 			smtp.sendmail(sender,receiver,Em.as_string())
 				
-	def send_bulk(li):
+	def send_bulk(li,sender,password,subject,body):
 		# list of email_id to send the mail
 		lst=li.split(",")
+		Em=EmailMessage()
 		for dest in lst:
+			Em['From']=sender
+			Em['To']=dest
+			Em['Subject']=subject
+			Em.set_content(body)
 			s = smtplib.SMTP('smtp.gmail.com', 587)
 			s.starttls()
-			s.login("kashifauddeen7@gmail.com", "cqjkwphkvffrgeax")
-			message = "hye this is bulk email"
-			s.sendmail("kashifauddeen7@gmail.com", dest, message)
+			s.login(sender, password)
+			s.sendmail(sender, dest, Em.as_string())
 			s.quit()
 
 	def shade_on(photo,res):
@@ -355,9 +428,9 @@ def voice_assistant():
 			speak_text("Byee")
 			break
 			
-		elif key=="shut down":
-			speak_text("Shutting Down")
-			return "shut down"
+		elif key=="power down":
+			speak_text("Powering Down")
+			return "power down"
 
 		negative=neg(key)
 		note=notePad(key)
@@ -375,6 +448,7 @@ def voice_assistant():
 		vol=volume(key)
 		spch=speech(key)
 		Ggl=ggl(key)
+		gemi=gem(key)
 		if(note) and (not(negative)):
 			app="notepad"
 			opening(app)
@@ -389,9 +463,16 @@ def voice_assistant():
 			sp.getoutput(app)
 		elif(txt) and (not(negative)):
 			app="whatsapp"
-			info=input("Enter the number of the person, text you want to send, hr of the time, min of the time:")
+			person=input("Enter the number of the person:")
+			mess=input("Do you want ai generated text(Y/N):")
+			if mess=='Y':
+				message=gemini(sys_role="you are a professional text typer who writes precise and to the point texts:")
+			else:
+				message=input("Enter your text:")
+			hrs=int(input("Enter the hours:"))
+			min=int(input("Enter the mins"))
 			time_delay=int(input("Enter time delay:"))
-			sendWAtxt(info)
+			sendWAtxt(person,message,hrs,min)
 			opening(app)
 			time.sleep(time_delay)
 			sp.run(["taskkill", "/F", "/IM", "chrome.exe"])
@@ -434,11 +515,23 @@ def voice_assistant():
 			password=input("Enter its password:")
 			receiver=input("Enter the email to which you are gonna send the mail:")
 			subject=input("Enter the subject of the mail:\n")
-			body=input("Enter the body of the mail:\n")
+			bd=input("Want gemini to write the mail for you(Y/N):")
+			if bd=='Y':
+				body=gemini("Your are a professional mail writer")
+			else:
+				body=input("Enter the body of the mail:\n")
 			send_mail(sender,receiver,password,subject,body)
 		elif(bulk) and (not(negative)):
 			li=input("Enter the list of mail ids:")
-			send_bulk(li)
+			sender=input("Enter the email fro which you are gonna send the mail:")
+			password=input("Enter its password:")
+			subject=input("Enter the subject of the mail:\n")
+			bd=input("Want gemini to write the mail for you(Y/N):")
+			if bd=='Y':
+				body=gemini("Your are a professional mail writer")
+			else:
+				body=input("Enter the body of the mail:\n")
+			send_bulk(li,sender,password,subject,body)
 		elif(vdo) and (not(negative)):
 			name=input("Enter video name:")
 			if input("Do you want video in video(Yes/No):")=="Yes":
@@ -454,13 +547,16 @@ def voice_assistant():
 		elif(Ggl) and (not(negative)):
 			query = input("Enter the search query: ")
 			google(query)
+		elif(gemi) and (not(negative)):
+			sys_role=input("Enter your instructions for the system:")
+			gemini(sys_role)
 		elif(negative):
 			print("Ok")
 	
 while True:
 	activate_text=listen_to_voice()
 	activate_text=activate_text.lower()
-	if activate_text=="hey laptop":
+	if activate_text=="hey zara":
 			sht_down=voice_assistant()
-			if(sht_down=="shut down"):
+			if(sht_down=="power down"):
 				break
