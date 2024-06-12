@@ -23,10 +23,11 @@ import pyttsx3
 import datetime
 import PIL.Image
 import google.generativeai as genai
+import requests
 
 er1="Sorry, I didn't catch that properly"
 er2="Can't process your request, please check your internet connection"
-def listen_to_voice():
+def listen_to_voice():#speech to text
 	recognizer=sr.Recognizer()#recognizer function is used to listen and understand the voice of the person giving the commands
 	with sr.Microphone() as source:#this directs the program to take audio input through our microphone
 		print("Listening...")
@@ -48,9 +49,9 @@ def speak_text(text):
 	engine.say(text)
 	engine.runAndWait()
 
-def gemini(sys_role):
+def gemini(sys_role):#full code that intigrates gemini with python
 	import os
-	genai.configure(api_key="Enter your API key")
+	genai.configure(api_key="AIzaSyDYJPe-K01tWd2koRAsFIJ8vHjZv4it8Cg")
 
 	generation_config = {
 	"temperature": 0.6,
@@ -100,7 +101,7 @@ def gemini(sys_role):
 		else:	
 			chat.send_message(prompt)#This is where we give our prompt
 		ans=chat.last.text
-		if audio_resp=='Y':
+		if audio_resp=='Y':#this is the code for allowing the text to speech program to speak the prompt out
 			speak_text(ans)
 			print(ans)
 		else:
@@ -246,6 +247,13 @@ def voice_assistant():
 	def gem(key):
 		gemlst=["gemini","Gemini","gema"]
 		for i in gemlst:
+			if i in key:
+				return True
+		return False
+	
+	def sms(key):
+		smslst=["sms"]
+		for i in smslst:
 			if i in key:
 				return True
 		return False
@@ -416,6 +424,22 @@ def voice_assistant():
 		for idx, result in enumerate(search(query, num_results=5), start=1):
 			print(f"{idx}. {result}")
 
+	def send_sms(api_key,device_id,number,message):
+		message = {
+			"secret": api_key,
+			"mode": "devices",
+			"device": device_id,
+			"sim": 1,
+			"priority": 1,
+			"phone": number,
+			"message": message
+		}
+
+		r = requests.post(url = "https://www.cloud.smschef.com/api/send/sms", params = message)  
+		# do something with response object
+		result = r.json()
+		return result
+
 	print("Welcome To Your Person Controller")
 	while True:
 		key=listen_to_voice()
@@ -449,6 +473,7 @@ def voice_assistant():
 		spch=speech(key)
 		Ggl=ggl(key)
 		gemi=gem(key)
+		Sms=sms(key)
 		if(note) and (not(negative)):
 			app="notepad"
 			opening(app)
@@ -550,6 +575,13 @@ def voice_assistant():
 		elif(gemi) and (not(negative)):
 			sys_role=input("Enter your instructions for the system:")
 			gemini(sys_role)
+		elif(Sms) and (not(negative)):
+			api_key="7f3327a40519291bd36576593bc4417bedbc9542"
+			device_id="00000000-0000-0000-9954-493415ef70b1"
+			number=input("Enter the number of the person you wanna send your sms too (along with country code):")
+			text=input("Enter the message you want to send:")
+			sent=send_sms(api_key,device_id,number,text)
+			speak_text(sent)
 		elif(negative):
 			print("Ok")
 	
